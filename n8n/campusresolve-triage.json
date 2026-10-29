@@ -1,0 +1,552 @@
+{
+  "name": "College Issue Reporting AI Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "College Issue Reporting",
+        "formDescription": "Report a campus issue and we will route it to the right department.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Student Name",
+              "fieldName": "student_name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Roll No / Student ID",
+              "fieldName": "roll_no",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Department",
+              "fieldType": "dropdown",
+              "fieldName": "department",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "CSE"
+                  },
+                  {
+                    "option": "ECE"
+                  },
+                  {
+                    "option": "Mechanical"
+                  },
+                  {
+                    "option": "Civil"
+                  },
+                  {
+                    "option": "Electrical"
+                  },
+                  {
+                    "option": "Other"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Issue Category",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Infrastructure"
+                  },
+                  {
+                    "option": "Faculty/Academic"
+                  },
+                  {
+                    "option": "Hostel"
+                  },
+                  {
+                    "option": "Safety/Ragging"
+                  },
+                  {
+                    "option": "Administration"
+                  },
+                  {
+                    "option": "Other"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Issue Description",
+              "fieldType": "textarea",
+              "fieldName": "issue_description",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Your Email",
+              "fieldType": "email",
+              "fieldName": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Attachment (optional)",
+              "fieldType": "file",
+              "fieldName": "attachment"
+            }
+          ]
+        },
+        "options": {
+          "buttonLabel": "Submit Issue",
+          "path": "college-issue",
+          "respondWithOptions": {
+            "values": {
+              "formSubmittedText": "Thank you. Your issue has been recorded and forwarded to the responsible department."
+            }
+          }
+        }
+      },
+      "id": "428f7295-3020-4b4f-b1fc-14e8237236b1",
+      "name": "Submit Issue",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        112
+      ],
+      "webhookId": "797ed20c-8ccb-4e82-a6ba-3d5bb6d72cbd"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "date",
+              "name": "date_reported",
+              "type": "string",
+              "value": "={{ $now.format('yyyy-MM-dd') }}"
+            },
+            {
+              "id": "time",
+              "name": "time_reported",
+              "type": "string",
+              "value": "={{ $now.format('HH:mm') }}"
+            },
+            {
+              "id": "ticket",
+              "name": "ticket_id",
+              "type": "string",
+              "value": "={{ $now.toMillis() }}"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "3ac9d49c-500b-489b-b833-e95c2e4efebe",
+      "name": "Enrich Ticket",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Category (student-selected, fixed): {{ $('Submit Issue').item.json['Issue Category'] }}\nDepartment: {{ $json.department }}\nIssue description:\n{{ $json.issue_description }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an issue-triage assistant for a college complaint reporting system.\n\nYou will receive a raw issue description submitted by a student, along with a category the student has already selected. Do NOT re-classify or override the category — treat it as fixed. Your job is only to:\n\n1. Assign an urgency level: LOW, MEDIUM, or HIGH.\n   - HIGH: safety issues, harassment, anything urgent/time-sensitive or affecting many students\n   - MEDIUM: affects learning/daily routine but not urgent\n   - LOW: minor inconvenience\n   - If category is Safety/Ragging, always set urgency to HIGH regardless of wording.\n\n2. Write a short, professional, 3-4 sentence email body addressed to the responsible teacher/department, summarizing the issue clearly and requesting action. Do not editorialize or add opinions — just relay the facts professionally.\n\n3. Extract a one-line summary (under 12 words) suitable for a spreadsheet cell.\n\nRespond ONLY in this exact JSON format, with no extra text:\n\n{\n  \"urgency\": \"\",\n  \"summary\": \"\",\n  \"email_subject\": \"\",\n  \"email_body\": \"\"\n}\n\nRules:\n- Never include the student's personal contact details inside email_body; that is handled separately by the system.\n- Keep email_body factual and neutral in tone, even if the student's original wording is emotional or informal."
+        }
+      },
+      "id": "a6394b71-d855-4cf5-aab3-343d814ab6a9",
+      "name": "Triage Issue",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        448,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "4b7b1c46-e6ce-4879-9843-42623c0cb2ac",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        464,
+        336
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "A5IhmLhpDTpOkljs",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\":\"object\",\"properties\":{\"urgency\":{\"type\":\"string\"},\"summary\":{\"type\":\"string\"},\"email_subject\":{\"type\":\"string\"},\"email_body\":{\"type\":\"string\"}},\"required\":[\"urgency\",\"summary\",\"email_subject\",\"email_body\"]}"
+      },
+      "id": "2ea55270-1743-4e85-b244-846392ad4cee",
+      "name": "Triage Schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        592,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1gEj7AZ_NlDldmLE8glWG5dn_2Zcq_n6Ol3OjmRhXBjw",
+          "mode": "list",
+          "cachedResultName": "Teacher_Directory",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gEj7AZ_NlDldmLE8glWG5dn_2Zcq_n6Ol3OjmRhXBjw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Category",
+              "lookupValue": "={{ $('Submit Issue').item.json['Issue Category'] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7e8b257c-9488-400e-9b0d-d78b6b393aaa",
+      "name": "Lookup Teacher",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        800,
+        112
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fyZVTHQm4ldSC6rp",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Lookup Teacher').item.json.Email }}",
+        "subject": "=[Ticket #{{ $('Enrich Ticket').item.json.ticket_id }}] {{ $('Submit Issue').item.json['Issue Category'] }} — {{ $('Triage Issue').item.json.output.urgency }}",
+        "emailType": "text",
+        "message": "={{ $('Triage Issue').item.json.output.email_body }}\n\n---\nTicket ID: {{ $('Enrich Ticket').item.json.ticket_id }}\nCategory: {{ $('Submit Issue').item.json['Issue Category'] }}\nUrgency: {{ $('Triage Issue').item.json.output.urgency }}\nDepartment: {{ $('Enrich Ticket').item.json.department }}\nReported: {{ $('Enrich Ticket').item.json.date_reported }} {{ $('Enrich Ticket').item.json.time_reported }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "edc204b2-9a9a-41a1-8087-c3e994ef3d00",
+      "name": "Email Teacher",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1024,
+        112
+      ],
+      "webhookId": "014d3b12-c544-401b-8ccc-a8613fedfb91",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "off54kdcjK7rl0RW",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1sFU_0B8ziSA6nQ1GnQ7m1s60czE6SRIaxcJRcXHGkEs",
+          "mode": "list",
+          "cachedResultName": "College_Tickets_Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sFU_0B8ziSA6nQ1GnQ7m1s60czE6SRIaxcJRcXHGkEs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sFU_0B8ziSA6nQ1GnQ7m1s60czE6SRIaxcJRcXHGkEs/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Ticket ID": "={{ $('Enrich Ticket').item.json.ticket_id }}",
+            "Date": "={{ $('Enrich Ticket').item.json.date_reported }}",
+            "Student Name": "={{ $('Submit Issue').item.json['student_name'] }}",
+            "Roll No": "={{ $('Submit Issue').item.json['roll_no'] }}",
+            "Department": "={{ $('Submit Issue').item.json['department'] }}",
+            "Category": "={{ $('Submit Issue').item.json['Issue Category'] }}",
+            "Urgency": "={{ $('Triage Issue').item.json.output.urgency }}",
+            "Description": "={{ $('Submit Issue').item.json['issue_description'] }}",
+            "Assigned Teacher": "={{ $('Lookup Teacher').item.json.Teacher }}",
+            "Teacher Email": "={{ $('Lookup Teacher').item.json.Email }}",
+            "Status": "Open"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Ticket ID",
+              "displayName": "Ticket ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Student Name",
+              "displayName": "Student Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Roll No",
+              "displayName": "Roll No",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Department",
+              "displayName": "Department",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Urgency",
+              "displayName": "Urgency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Teacher",
+              "displayName": "Assigned Teacher",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Teacher Email",
+              "displayName": "Teacher Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "dfa1657b-6847-45bb-ac8c-3950ed1a71ec",
+      "name": "Log Ticket",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1248,
+        112
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fyZVTHQm4ldSC6rp",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Enrich Ticket').item.json.email }}",
+        "subject": "=[Ticket #{{ $('Enrich Ticket').item.json.ticket_id }}] We received your issue",
+        "emailType": "text",
+        "message": "=Hi {{ $('Enrich Ticket').item.json.student_name }},\n\nYour issue has been reported and forwarded to {{ $('Lookup Teacher').item.json.Teacher }} ({{ $('Lookup Teacher').item.json.Email }}).\n\nTicket ID: {{ $('Enrich Ticket').item.json.ticket_id }}\nCategory: {{ $('Submit Issue').item.json['Issue Category'] }}\nUrgency: {{ $('Triage Issue').item.json.output.urgency }}\nStatus: Open\n\nWe will get back to you as the issue is addressed.\n\n— College Support",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "4a3781f2-27bb-4275-b55b-d308fc180722",
+      "name": "Confirm to Student",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        112
+      ],
+      "webhookId": "592edec2-8120-44ef-a4cc-665393bcef89",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "off54kdcjK7rl0RW",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Submit Issue": {
+      "main": [
+        [
+          {
+            "node": "Enrich Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich Ticket": {
+      "main": [
+        [
+          {
+            "node": "Triage Issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Triage Issue": {
+      "main": [
+        [
+          {
+            "node": "Lookup Teacher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Triage Issue",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Triage Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Triage Issue",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Teacher": {
+      "main": [
+        [
+          {
+            "node": "Email Teacher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Teacher": {
+      "main": [
+        [
+          {
+            "node": "Log Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Ticket": {
+      "main": [
+        [
+          {
+            "node": "Confirm to Student",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "ANK2kE0RPVBuGz8N",
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "pinData": {},
+  "triggerCount": 1,
+  "meta": null
+}
